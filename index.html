@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Word Police - Phonics Game</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: linear-gradient(180deg, #87CEEB 0%, #87CEEB 60%, #4a7a2e 60%, #4a7a2e 100%);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-x: hidden;
+  }
+
+  #game-container {
+    width: 100%;
+    max-width: 800px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+  }
+
+  h1 {
+    font-size: 2rem;
+    color: #1a1a2e;
+    text-shadow: 2px 2px 0 #fff;
+    letter-spacing: 2px;
+    margin-top: 12px;
+  }
+
+  /* Progress bar */
+  #progress-bar-container {
+    width: 100%;
+    background: #fff;
+    border-radius: 12px;
+    border: 3px solid #1a1a2e;
+    padding: 6px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  }
+
+  #progress-bar {
+    height: 24px;
+    border-radius: 8px;
+    background: linear-gradient(90deg, #2196F3, #00BCD4);
+    width: 0%;
+    transition: width 0.5s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    font-size: 0.8rem;
+  }
+
+  /* Road scene */
+  #road-scene {
+    width: 100%;
+    height: 130px;
+    background: linear-gradient(180deg, transparent 0%, transparent 40%, #555 40%, #555 90%, #4a7a2e 90%);
+    border-radius: 12px;
+    border: 3px solid #1a1a2e;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  }
+
+  /* Road markings */
+  #road-scene::before {
+    content: '';
+    position: absolute;
+    top: 62%;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: repeating-linear-gradient(90deg, #FFD700 0px, #FFD700 40px, transparent 40px, transparent 80px);
+  }
+
+  .car {
+    position: absolute;
+    bottom: 14px;
+    font-size: 3.2rem;
+    transition: left 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    filter: drop-shadow(2px 3px 4px rgba(0,0,0,0.4));
+    line-height: 1;
+  }
+
+  #police-car {
+    left: 5%;
+  }
+
+  #criminal-car {
+    left: 75%;
+    transform: scaleX(-1);
+  }
+
+  /* Score indicators above cars */
+  #chase-label {
+    position: absolute;
+    top: 4px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.6);
+    color: #FFD700;
+    font-size: 0.75rem;
+    font-weight: bold;
+    padding: 2px 10px;
+    border-radius: 10px;
+    white-space: nowrap;
+    letter-spacing: 1px;
+  }
+
+  /* Question area */
+  #question-box {
+    background: white;
+    border-radius: 16px;
+    border: 3px solid #1a1a2e;
+    padding: 24px 20px 20px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 6px 16px rgba(0,0,0,0.2);
+  }
+
+  #word-prompt {
+    font-size: 1.1rem;
+    color: #444;
+    margin-bottom: 8px;
+  }
+
+  #speak-btn {
+    background: linear-gradient(135deg, #2196F3, #1565C0);
+    color: white;
+    border: none;
+    border-radius: 50px;
+    padding: 14px 32px;
+    font-size: 1.3rem;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(33,150,243,0.4);
+    transition: transform 0.15s, box-shadow 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 auto 20px;
+    letter-spacing: 1px;
+    font-weight: bold;
+  }
+
+  #speak-btn:hover { transform: scale(1.05); box-shadow: 0 6px 16px rgba(33,150,243,0.5); }
+  #speak-btn:active { transform: scale(0.97); }
+  #speak-btn.speaking { background: linear-gradient(135deg, #FF9800, #E65100); }
+
+  .speaker-icon { font-size: 1.4rem; }
+
+  #options-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+    margin-top: 8px;
+  }
+
+  .option-btn {
+    background: linear-gradient(135deg, #f5f5f5, #e0e0e0);
+    border: 3px solid #bbb;
+    border-radius: 14px;
+    padding: 18px 8px;
+    font-size: 1.4rem;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.18s;
+    color: #1a1a2e;
+    box-shadow: 0 3px 8px rgba(0,0,0,0.12);
+    letter-spacing: 1px;
+  }
+
+  .option-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+    border-color: #2196F3;
+    transform: translateY(-3px);
+    box-shadow: 0 6px 14px rgba(33,150,243,0.3);
+  }
+
+  .option-btn:active:not(:disabled) { transform: translateY(0); }
+
+  .option-btn.correct {
+    background: linear-gradient(135deg, #c8e6c9, #a5d6a7);
+    border-color: #2e7d32;
+    color: #1b5e20;
+    animation: correctPop 0.4s ease;
+  }
+
+  .option-btn.wrong {
+    background: linear-gradient(135deg, #ffcdd2, #ef9a9a);
+    border-color: #c62828;
+    color: #7f0000;
+    animation: wrongShake 0.4s ease;
+  }
+
+  .option-btn.greyed {
+    background: #e0e0e0;
+    border-color: #9e9e9e;
+    color: #9e9e9e;
+    cursor: not-allowed;
+    opacity: 0.5;
+    transform: none;
+  }
+
+  @keyframes correctPop {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.12); }
+    100% { transform: scale(1); }
+  }
+
+  @keyframes wrongShake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-8px); }
+    75% { transform: translateX(8px); }
+  }
+
+  /* Score display */
+  #score-display {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    background: white;
+    border-radius: 14px;
+    border: 3px solid #1a1a2e;
+    padding: 10px 24px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    font-size: 1rem;
+    font-weight: bold;
+  }
+
+  .score-item { display: flex; align-items: center; gap: 6px; }
+  .score-police { color: #1565C0; }
+  .score-criminal { color: #c62828; }
+
+  .stars {
+    display: flex;
+    gap: 4px;
+  }
+
+  .star {
+    font-size: 1.3rem;
+    filter: grayscale(1) opacity(0.4);
+    transition: filter 0.3s;
+  }
+
+  .star.lit {
+    filter: none;
+    animation: starPop 0.3s ease;
+  }
+
+  @keyframes starPop {
+    0% { transform: scale(0.5); }
+    70% { transform: scale(1.3); }
+    100% { transform: scale(1); }
+  }
+
+  /* Overlay screens */
+  .overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+  }
+
+  .overlay.active { display: flex; }
+
+  .overlay-card {
+    background: white;
+    border-radius: 24px;
+    padding: 40px 36px;
+    text-align: center;
+    max-width: 420px;
+    width: 90%;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+    animation: overlayIn 0.4s ease;
+  }
+
+  @keyframes overlayIn {
+    from { transform: scale(0.7) translateY(30px); opacity: 0; }
+    to { transform: scale(1) translateY(0); opacity: 1; }
+  }
+
+  .overlay-card h2 { font-size: 2rem; margin-bottom: 12px; }
+  .overlay-card p { font-size: 1.1rem; color: #555; margin-bottom: 24px; line-height: 1.5; }
+  .overlay-card .big-emoji { font-size: 4rem; margin-bottom: 16px; display: block; }
+
+  .play-btn {
+    background: linear-gradient(135deg, #4CAF50, #2e7d32);
+    color: white;
+    border: none;
+    border-radius: 50px;
+    padding: 16px 48px;
+    font-size: 1.3rem;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 6px 16px rgba(76,175,80,0.4);
+    transition: transform 0.15s, box-shadow 0.15s;
+    letter-spacing: 1px;
+  }
+
+  .play-btn:hover { transform: scale(1.06); box-shadow: 0 8px 20px rgba(76,175,80,0.5); }
+  .play-btn:active { transform: scale(0.97); }
+
+  /* Jail animation */
+  #jail-scene {
+    font-size: 3rem;
+    margin: 16px 0;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .jail-car { animation: driveIn 0.8s ease forwards; opacity: 0; }
+  .jail-criminal { animation: walkIn 1s ease 0.8s forwards; opacity: 0; }
+  .jail-door { animation: doorOpen 0.5s ease 1.8s forwards; }
+  .jail-locked { animation: lockClose 0.3s ease 2.5s backwards; }
+
+  @keyframes driveIn {
+    from { transform: translateX(-80px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+
+  @keyframes walkIn {
+    from { transform: translateX(-40px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+
+  /* Feedback flash */
+  #feedback-flash {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    padding: 12px;
+    text-align: center;
+    font-size: 1.3rem;
+    font-weight: bold;
+    color: white;
+    z-index: 50;
+    transform: translateY(-100%);
+    transition: transform 0.3s;
+    border-radius: 0 0 12px 12px;
+  }
+
+  #feedback-flash.show { transform: translateY(0); }
+  #feedback-flash.correct-flash { background: #2e7d32; }
+  #feedback-flash.wrong-flash { background: #c62828; }
+
+  /* Start screen */
+  #start-screen { display: flex; }
+
+  /* Responsive */
+  @media (max-width: 480px) {
+    h1 { font-size: 1.5rem; }
+    .option-btn { font-size: 1.1rem; padding: 14px 4px; }
+    #speak-btn { font-size: 1.1rem; padding: 12px 24px; }
+    .car { font-size: 2.4rem; }
+    #road-scene { height: 100px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="game-container">
+  <h1>🚓 Word Police</h1>
+
+  <div id="score-display">
+    <div class="score-item score-police">
+      <span>🚓 Catches:</span>
+      <div class="stars" id="police-stars"></div>
+    </div>
+    <div class="score-item score-criminal">
+      <span>🏃 Escapes:</span>
+      <div class="stars" id="criminal-stars"></div>
+    </div>
+  </div>
+
+  <div id="road-scene">
+    <div id="chase-label">🚨 POLICE PURSUIT 🚨</div>
+    <div class="car" id="police-car">🚓</div>
+    <div class="car" id="criminal-car">🚗</div>
+  </div>
+
+  <div id="progress-bar-container">
+    <div id="progress-bar">0 / 5</div>
+  </div>
+
+  <div id="question-box">
+    <p id="word-prompt">Listen to the word, then choose the correct spelling!</p>
+    <button id="speak-btn" onclick="speakWord()">
+      <span class="speaker-icon">🔊</span>
+      <span id="speak-label">Hear the word</span>
+    </button>
+    <div id="options-grid">
+      <button class="option-btn" onclick="selectOption(0)"></button>
+      <button class="option-btn" onclick="selectOption(1)"></button>
+      <button class="option-btn" onclick="selectOption(2)"></button>
+    </div>
+  </div>
+</div>
+
+<!-- Feedback flash -->
+<div id="feedback-flash"></div>
+
+<!-- Start screen -->
+<div class="overlay active" id="start-screen">
+  <div class="overlay-card">
+    <span class="big-emoji">🚓</span>
+    <h2>Word Police!</h2>
+    <p>Listen to the word, then pick the right spelling. Get <strong>5 correct</strong> to catch the criminal before they escape!</p>
+    <p style="margin-top:8px; margin-bottom:24px; font-size:0.95rem;">Make sure your sound is on 🔊</p>
+    <button class="play-btn" onclick="startGame()">Start Chase!</button>
+  </div>
+</div>
+
+<!-- Win screen -->
+<div class="overlay" id="win-screen">
+  <div class="overlay-card">
+    <span class="big-emoji">🎉</span>
+    <h2>Caught them!</h2>
+    <div id="jail-scene">
+      <span class="jail-car">🚓</span>
+      <span class="jail-criminal">👮</span>
+      <span>→</span>
+      <span>🔒</span>
+    </div>
+    <p>Amazing spelling! The criminal is going to <strong>jail!</strong> You got all 5 words right!</p>
+    <button class="play-btn" onclick="restartGame()">Play Again!</button>
+  </div>
+</div>
+
+<!-- Lose screen -->
+<div class="overlay" id="lose-screen">
+  <div class="overlay-card" style="border: 4px solid #c62828;">
+    <span class="big-emoji">😬</span>
+    <h2 style="color:#c62828;">They got away!</h2>
+    <p>The criminals escaped this time... but the police never give up! Try again and get all 5 words right!</p>
+    <button class="play-btn" style="background: linear-gradient(135deg, #E53935, #b71c1c);" onclick="restartGame()">Try Again!</button>
+  </div>
+</div>
+
+<script>
+// ── Exception words (Year 1 common exception words) ──────────────────────────
+const WORDS = [
+  "the","a","do","to","today","of","said","says","are","were","was","is",
+  "his","has","I","you","your","they","be","he","me","she","we","no","go",
+  "so","by","my","here","there","where","love","come","some","one","once",
+  "ask","friend","school","put","push","pull","full","house","our","would",
+  "could","should","Mr","Mrs","people","water","many","again","half","money",
+  "every","any","only","both","door","floor","poor","because","find","kind",
+  "mind","behind","child","children","wild","climb","most","only","also",
+  "after","fast","last","past","father","class","grass","pass","plant",
+  "path","bath","hour","move","prove","improve","sure","sugar","eye","could",
+  "who","whole","any","many","clothes","busy","pretty","beautiful","called",
+  "asked","looked","their","people","oh","their","Mr","Mrs","looked","called"
+];
+
+// Deduplicate and shuffle
+const WORD_POOL = [...new Set(WORDS)];
+
+// Generate phonetically similar distractors for a given word
+function generateDistractors(word) {
+  const distractors = [];
+  const transformations = [
+    // Common misspellings / phonetic alternatives
+    w => w.replace(/ie/g,'ei').replace(/ei/g,'ie'),
+    w => w.replace(/e$/,''),
+    w => w + 'e',
+    w => w.replace(/i/g,'y').replace(/y/g,'i'),
+    w => w.replace(/ou/g,'ow').replace(/ow/g,'ou'),
+    w => w.replace(/ea/g,'ee').replace(/ee/g,'ea'),
+    w => w.replace(/ai/g,'ay').replace(/ay/g,'ai'),
+    w => w.replace(/oo/g,'u').replace(/u/,'oo'),
+    w => w.replace(/a/,'e').replace(/e/,'a'),
+    w => w.replace(/c/g,'k').replace(/k/g,'c'),
+    w => w.replace(/wh/,'w').replace(/w(?!h)/,'wh'),
+    w => w.charAt(0).toUpperCase() + w.slice(1),
+    w => w.toLowerCase(),
+    w => w.replace(/sh/,'ch').replace(/ch/,'sh'),
+    w => w.replace(/th/,'t').replace(/(?<!t)h/,'th'),
+    w => w.split('').reverse().join('').substring(0, w.length) === w ? w + 'r' : w.replace(/(.)(.)/, '$2$1'),
+    w => w + 's',
+    w => w.replace(/s$/,''),
+    w => w.replace(/ll/,'l').replace(/(?<=[^l])l(?=[^l])/,'ll'),
+    w => w.replace(/ss/,'s').replace(/(?<=[^s])s(?=[^s])/,'ss'),
+    w => { const i = Math.floor(w.length/2); return w.slice(0,i) + w[i+1] + w[i] + w.slice(i+2); }
+  ];
+
+  for (const t of transformations) {
+    try {
+      const d = t(word);
+      if (d && d !== word && d.length > 0 && d.length <= word.length + 3) {
+        distractors.push(d);
+      }
+    } catch(e) {}
+  }
+
+  // Also pick random words from pool as distractors
+  const poolDistractors = WORD_POOL
+    .filter(w => w !== word && Math.abs(w.length - word.length) <= 2)
+    .sort(() => Math.random() - 0.5)
+    .slice(0, 5);
+
+  distractors.push(...poolDistractors);
+
+  // Deduplicate and filter out empties
+  const unique = [...new Set(distractors)].filter(d => d && d !== word && d.trim().length > 0);
+  return unique.sort(() => Math.random() - 0.5).slice(0, 2);
+}
+
+// ── Game state ────────────────────────────────────────────────────────────────
+let correctCount = 0;
+let escapeCount = 0;
+let currentWord = '';
+let currentOptions = [];
+let correctIndex = 0;
+let wrongAttempts = 0;
+let greyedIndices = [];
+let answeredCorrectly = false;
+let speechSynth = window.speechSynthesis;
+let gameActive = false;
+let remainingWords = [];
+
+const CORRECT_NEEDED = 5;
+const ESCAPES_TO_LOSE = 3;
+
+function shuffleArray(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function startGame() {
+  correctCount = 0;
+  escapeCount = 0;
+  wrongAttempts = 0;
+  greyedIndices = [];
+  answeredCorrectly = false;
+  gameActive = true;
+
+  document.getElementById('start-screen').classList.remove('active');
+  document.getElementById('win-screen').classList.remove('active');
+  document.getElementById('lose-screen').classList.remove('active');
+
+  remainingWords = shuffleArray([...WORD_POOL]);
+  updateStars();
+  updateCars();
+  updateProgressBar();
+  nextQuestion();
+}
+
+function restartGame() {
+  startGame();
+}
+
+function nextQuestion() {
+  if (!gameActive) return;
+
+  wrongAttempts = 0;
+  greyedIndices = [];
+  answeredCorrectly = false;
+
+  // Pick next word
+  if (remainingWords.length === 0) remainingWords = shuffleArray([...WORD_POOL]);
+  currentWord = remainingWords.pop();
+
+  // Generate options
+  const distractors = generateDistractors(currentWord);
+  // Ensure we have exactly 2 distractors
+  while (distractors.length < 2) {
+    const fallback = WORD_POOL.filter(w => w !== currentWord && !distractors.includes(w));
+    distractors.push(fallback[Math.floor(Math.random() * fallback.length)]);
+  }
+
+  const options = [currentWord, distractors[0], distractors[1]];
+  currentOptions = shuffleArray(options);
+  correctIndex = currentOptions.indexOf(currentWord);
+
+  renderOptions();
+  updateButtons(false);
+
+  document.getElementById('speak-label').textContent = 'Hear the word';
+  document.getElementById('speak-btn').classList.remove('speaking');
+
+  // Auto-speak after short delay
+  setTimeout(speakWord, 400);
+}
+
+function renderOptions() {
+  const btns = document.querySelectorAll('.option-btn');
+  btns.forEach((btn, i) => {
+    btn.textContent = currentOptions[i];
+    btn.className = 'option-btn';
+    btn.disabled = false;
+  });
+}
+
+function updateButtons(locked) {
+  const btns = document.querySelectorAll('.option-btn');
+  btns.forEach((btn, i) => {
+    if (greyedIndices.includes(i)) {
+      btn.className = 'option-btn greyed';
+      btn.disabled = true;
+    } else if (locked) {
+      btn.disabled = true;
+    } else {
+      btn.disabled = false;
+    }
+  });
+}
+
+function speakWord() {
+  if (!currentWord) return;
+  speechSynth.cancel();
+  const utterance = new SpeechSynthesisUtterance(currentWord);
+  utterance.lang = 'en-GB';
+  utterance.rate = 0.85;
+  utterance.pitch = 1.1;
+
+  // Try to find a UK voice
+  const voices = speechSynth.getVoices();
+  const ukVoice = voices.find(v =>
+    v.lang === 'en-GB' ||
+    v.name.includes('UK') ||
+    v.name.includes('British') ||
+    v.name.includes('Daniel') ||
+    v.name.includes('Serena')
+  );
+  if (ukVoice) utterance.voice = ukVoice;
+
+  const btn = document.getElementById('speak-btn');
+  btn.classList.add('speaking');
+  document.getElementById('speak-label').textContent = currentWord.toUpperCase();
+
+  utterance.onend = () => {
+    btn.classList.remove('speaking');
+    document.getElementById('speak-label').textContent = 'Hear it again';
+  };
+
+  speechSynth.speak(utterance);
+}
+
+function selectOption(index) {
+  if (!gameActive || answeredCorrectly) return;
+  if (greyedIndices.includes(index)) return;
+
+  const btns = document.querySelectorAll('.option-btn');
+
+  if (index === correctIndex) {
+    // Correct!
+    answeredCorrectly = true;
+    btns[index].classList.add('correct');
+    updateButtons(true);
+
+    correctCount++;
+    updateStars();
+    updateProgressBar();
+    showFlash('✅ Correct! Well done!', 'correct-flash');
+
+    // Move police car closer
+    updateCars();
+
+    if (correctCount >= CORRECT_NEEDED) {
+      setTimeout(showWinScreen, 1000);
+    } else {
+      setTimeout(nextQuestion, 1200);
+    }
+  } else {
+    // Wrong
+    btns[index].classList.add('wrong');
+    wrongAttempts++;
+    greyedIndices.push(index);
+
+    if (wrongAttempts >= 2) {
+      // Criminal gains ground after 2 wrong — but player must still press correct
+      escapeCount++;
+      updateStars();
+      updateCars();
+      showFlash('❌ Two wrong! The criminal is getting away...', 'wrong-flash');
+
+      if (escapeCount >= ESCAPES_TO_LOSE) {
+        updateButtons(true);
+        setTimeout(showLoseScreen, 1200);
+        return;
+      }
+    } else {
+      showFlash('❌ Not quite — try again!', 'wrong-flash');
+    }
+
+    setTimeout(() => {
+      btns[index].classList.remove('wrong');
+      updateButtons(false);
+    }, 600);
+  }
+}
+
+function updateCars() {
+  // Police: starts at 5%, moves toward criminal (max 65%)
+  // Criminal: starts at 75%, can gain ground up to 92%
+  const policePercent = 5 + (correctCount / CORRECT_NEEDED) * 60;
+  const criminalPercent = 75 + (escapeCount / ESCAPES_TO_LOSE) * 17;
+
+  document.getElementById('police-car').style.left = policePercent + '%';
+  document.getElementById('criminal-car').style.left = Math.min(criminalPercent, 94) + '%';
+}
+
+function updateProgressBar() {
+  const pct = (correctCount / CORRECT_NEEDED) * 100;
+  const bar = document.getElementById('progress-bar');
+  bar.style.width = pct + '%';
+  bar.textContent = correctCount + ' / ' + CORRECT_NEEDED;
+}
+
+function updateStars() {
+  const policeContainer = document.getElementById('police-stars');
+  const criminalContainer = document.getElementById('criminal-stars');
+
+  policeContainer.innerHTML = '';
+  criminalContainer.innerHTML = '';
+
+  for (let i = 0; i < CORRECT_NEEDED; i++) {
+    const star = document.createElement('span');
+    star.className = 'star' + (i < correctCount ? ' lit' : '');
+    star.textContent = '⭐';
+    policeContainer.appendChild(star);
+  }
+
+  for (let i = 0; i < ESCAPES_TO_LOSE; i++) {
+    const star = document.createElement('span');
+    star.className = 'star' + (i < escapeCount ? ' lit' : '');
+    star.textContent = '💨';
+    criminalContainer.appendChild(star);
+  }
+}
+
+function showFlash(msg, cls) {
+  const el = document.getElementById('feedback-flash');
+  el.textContent = msg;
+  el.className = 'show ' + cls;
+  clearTimeout(el._timer);
+  el._timer = setTimeout(() => { el.className = ''; }, 1800);
+}
+
+function showWinScreen() {
+  gameActive = false;
+  speechSynth.cancel();
+
+  // Say something fun
+  const u = new SpeechSynthesisUtterance("You caught them! Brilliant spelling!");
+  u.lang = 'en-GB';
+  u.rate = 0.9;
+  u.pitch = 1.2;
+  const voices = speechSynth.getVoices();
+  const ukVoice = voices.find(v => v.lang === 'en-GB');
+  if (ukVoice) u.voice = ukVoice;
+  speechSynth.speak(u);
+
+  document.getElementById('win-screen').classList.add('active');
+}
+
+function showLoseScreen() {
+  gameActive = false;
+  speechSynth.cancel();
+
+  const u = new SpeechSynthesisUtterance("Oh no, they got away! Keep practising!");
+  u.lang = 'en-GB';
+  u.rate = 0.9;
+  const voices = speechSynth.getVoices();
+  const ukVoice = voices.find(v => v.lang === 'en-GB');
+  if (ukVoice) u.voice = ukVoice;
+  speechSynth.speak(u);
+
+  document.getElementById('lose-screen').classList.add('active');
+}
+
+// Pre-load voices
+speechSynth.onvoiceschanged = () => { speechSynth.getVoices(); };
+speechSynth.getVoices();
+</script>
+</body>
+</html>
