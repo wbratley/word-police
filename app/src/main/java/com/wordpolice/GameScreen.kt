@@ -6,8 +6,6 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
@@ -28,14 +26,9 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -115,79 +108,90 @@ fun GameApp(viewModel: GameViewModel, soundManager: SoundManager) {
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize()) {
-        // Gradient background
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(Brush.verticalGradient(listOf(Color(0xFF87CEEB), Color(0xFF5BA8D4))))
-        )
-
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Brush.verticalGradient(listOf(Color(0xFF87CEEB), Color(0xFF5BA8D4))))
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 16.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+                .padding(horizontal = 12.dp, vertical = 8.dp)
         ) {
-            Text(
-                text = "🚓 Word Police",
-                fontSize = 26.sp,
-                fontWeight = FontWeight.ExtraBold,
-                color = Color(0xFF1A1A2E),
-                modifier = Modifier.padding(top = 8.dp)
+            ScoreBar(correctCount = state.correctCount, escapeCount = state.escapeCount)
+
+            Spacer(Modifier.height(8.dp))
+
+            RoadScene(
+                policeFraction = state.policeFraction,
+                criminalFraction = state.criminalFraction,
+                modifier = Modifier.fillMaxWidth().height(180.dp)
             )
 
-            if (state.screen == Screen.PLAYING || state.screen == Screen.ROUND_COMPLETE) {
-                Text(
-                    text = "${state.currentLevel.emoji}  ${state.currentLevel.name}",
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = Color(0xFF1A1A2E).copy(alpha = 0.75f)
-                )
-            }
-
-            ScoreRow(correctCount = state.correctCount, escapeCount = state.escapeCount)
-            RoadScene(policeFraction = state.policeFraction, criminalFraction = state.criminalFraction)
-            ProgressRow(correctCount = state.correctCount)
+            Spacer(Modifier.height(8.dp))
 
             if (state.screen == Screen.PLAYING && state.question != null) {
-                QuestionCard(
-                    question = state.question!!,
-                    greyedOptions = state.greyedOptions,
-                    answeredCorrectly = state.answeredCorrectly,
-                    onSpeak = { state.question?.word?.let { soundManager.speakWord(it) } },
-                    onSelect = { index ->
-                        when (viewModel.selectOption(index)) {
-                            SelectResult.CORRECT -> {
-                                soundManager.playCorrect()
-                                feedbackMsg = "✅ Correct! Well done!"
-                                feedbackGood = true; feedbackVisible = true; feedbackTick++
-                            }
-                            SelectResult.WRONG -> {
-                                soundManager.playWrong()
-                                feedbackMsg = "❌ Not quite — try again!"
-                                feedbackGood = false; feedbackVisible = true; feedbackTick++
-                            }
-                            SelectResult.ESCAPE -> {
-                                soundManager.playEscape()
-                                feedbackMsg = "❌ Two wrong! Criminal is getting away!"
-                                feedbackGood = false; feedbackVisible = true; feedbackTick++
-                            }
-                            SelectResult.NONE -> {}
-                        }
-                    }
-                )
-            }
+                val q = state.question!!
 
-            Spacer(Modifier.height(24.dp))
+                SpeakerButton(
+                    onClick = { soundManager.speakWord(q.word) },
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(Modifier.height(8.dp))
+
+                q.options.forEachIndexed { index, option ->
+                    val isGreyed = index in state.greyedOptions
+                    val isCorrect = state.answeredCorrectly && index == q.correctIndex
+                    val clickable = !isGreyed && !state.answeredCorrectly
+                    val bg = when { isGreyed -> Color(0xFFEEEEEE); isCorrect -> Color(0xFFC8E6C9); else -> Color.White }
+                    val border = when { isGreyed -> Color(0xFFBBBBBB); isCorrect -> Color(0xFF2E7D32); else -> Color(0xFFCCCCCC) }
+                    val textCol = when { isGreyed -> Color(0xFFAAAAAA); isCorrect -> Color(0xFF1B5E20); else -> Color(0xFF1A1A2E) }
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .weight(1f)
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(bg)
+                            .border(3.dp, border, RoundedCornerShape(16.dp))
+                            .then(
+                                if (clickable) Modifier.clickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null
+                                ) {
+                                    when (viewModel.selectOption(index)) {
+                                        SelectResult.CORRECT -> {
+                                            soundManager.playCorrect()
+                                            feedbackMsg = "✅"; feedbackGood = true; feedbackVisible = true; feedbackTick++
+                                        }
+                                        SelectResult.WRONG -> {
+                                            soundManager.playWrong()
+                                            feedbackMsg = "❌"; feedbackGood = false; feedbackVisible = true; feedbackTick++
+                                        }
+                                        SelectResult.ESCAPE -> {
+                                            soundManager.playEscape()
+                                            feedbackMsg = "💨"; feedbackGood = false; feedbackVisible = true; feedbackTick++
+                                        }
+                                        SelectResult.NONE -> {}
+                                    }
+                                }
+                                else Modifier
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(option, fontSize = 40.sp, fontWeight = FontWeight.ExtraBold, color = textCol)
+                    }
+
+                    if (index < q.options.lastIndex) Spacer(Modifier.height(8.dp))
+                }
+            } else {
+                Spacer(Modifier.weight(1f))
+            }
         }
 
-        // Feedback banner slides in from top
         FeedbackBanner(visible = feedbackVisible, message = feedbackMsg, isGood = feedbackGood)
 
-        // Overlay screens
         when (state.screen) {
             Screen.LEVEL_SELECT -> LevelSelectOverlay(onSelectLevel = { viewModel.selectLevel(it) })
             Screen.ROUND_COMPLETE -> RoundCompleteOverlay(
@@ -208,45 +212,25 @@ fun GameApp(viewModel: GameViewModel, soundManager: SoundManager) {
     }
 }
 
-// ─── Score row ───────────────────────────────────────────────────────────────
+// ─── Score bar ───────────────────────────────────────────────────────────────
 
 @Composable
-fun ScoreRow(correctCount: Int, escapeCount: Int) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(4.dp)
+fun ScoreBar(correctCount: Int, escapeCount: Int) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("🚓 Catches", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFF1565C0))
-                Row {
-                    repeat(CORRECT_NEEDED) { i ->
-                        Text(
-                            "⭐",
-                            fontSize = 18.sp,
-                            color = if (i < correctCount) Color.Unspecified else Color.Gray.copy(alpha = 0.25f)
-                        )
-                    }
-                }
+        Row {
+            repeat(CORRECT_NEEDED) { i ->
+                Text("⭐", fontSize = 26.sp,
+                    color = if (i < correctCount) Color.Unspecified else Color.White.copy(alpha = 0.3f))
             }
-            Box(modifier = Modifier.width(1.dp).height(38.dp).background(Color(0xFFDDDDDD)))
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("💨 Escapes", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = Color(0xFFc62828))
-                Row {
-                    repeat(ESCAPES_TO_LOSE) { i ->
-                        Text(
-                            "💨",
-                            fontSize = 18.sp,
-                            color = if (i < escapeCount) Color.Unspecified else Color.Gray.copy(alpha = 0.25f)
-                        )
-                    }
-                }
+        }
+        Row {
+            repeat(ESCAPES_TO_LOSE) { i ->
+                Text("💨", fontSize = 26.sp,
+                    color = if (i < escapeCount) Color.Unspecified else Color.White.copy(alpha = 0.3f))
             }
         }
     }
@@ -255,7 +239,7 @@ fun ScoreRow(correctCount: Int, escapeCount: Int) {
 // ─── Road scene ──────────────────────────────────────────────────────────────
 
 @Composable
-fun RoadScene(policeFraction: Float, criminalFraction: Float) {
+fun RoadScene(policeFraction: Float, criminalFraction: Float, modifier: Modifier = Modifier) {
     val animPolice by animateFloatAsState(
         targetValue = policeFraction,
         animationSpec = tween(700, easing = FastOutSlowInEasing),
@@ -268,9 +252,7 @@ fun RoadScene(policeFraction: Float, criminalFraction: Float) {
     )
 
     BoxWithConstraints(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(140.dp)
+        modifier = modifier
             .clip(RoundedCornerShape(12.dp))
             .border(3.dp, Color(0xFF1A1A2E), RoundedCornerShape(12.dp))
     ) {
@@ -340,115 +322,17 @@ private fun DrawScope.drawRoad() {
     }
 }
 
-// ─── Progress bar ────────────────────────────────────────────────────────────
+// ─── Speaker button ──────────────────────────────────────────────────────────
 
 @Composable
-fun ProgressRow(correctCount: Int) {
-    val progress by animateFloatAsState(
-        targetValue = correctCount.toFloat() / CORRECT_NEEDED,
-        animationSpec = tween(500),
-        label = "progress"
-    )
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(12.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(3.dp)
-    ) {
-        Column(modifier = Modifier.padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            LinearProgressIndicator(
-                progress = { progress },
-                modifier = Modifier.fillMaxWidth().height(16.dp).clip(RoundedCornerShape(8.dp)),
-                color = Color(0xFF2196F3),
-                trackColor = Color(0xFFE0E0E0)
-            )
-            Text("$correctCount / $CORRECT_NEEDED correct", fontSize = 12.sp, color = Color(0xFF666666), modifier = Modifier.padding(top = 4.dp))
-        }
-    }
-}
-
-// ─── Question card ───────────────────────────────────────────────────────────
-
-@Composable
-fun QuestionCard(
-    question: Question,
-    greyedOptions: Set<Int>,
-    answeredCorrectly: Boolean,
-    onSpeak: () -> Unit,
-    onSelect: (Int) -> Unit
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
+fun SpeakerButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Button(
+        onClick = onClick,
+        modifier = modifier.height(64.dp),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(6.dp)
+        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1565C0))
     ) {
-        Column(modifier = Modifier.padding(20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                "Listen to the word, then choose the correct spelling!",
-                fontSize = 14.sp,
-                color = Color(0xFF666666),
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(bottom = 14.dp)
-            )
-
-            Button(
-                onClick = onSpeak,
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1565C0)),
-                shape = RoundedCornerShape(50.dp),
-                modifier = Modifier.padding(bottom = 18.dp)
-            ) {
-                Text(
-                    "🔊  Hear the word",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
-                )
-            }
-
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                question.options.forEachIndexed { index, option ->
-                    val isGreyed = index in greyedOptions
-                    val isCorrectAndDone = answeredCorrectly && index == question.correctIndex
-
-                    val bg = when {
-                        isGreyed -> Color(0xFFEEEEEE)
-                        isCorrectAndDone -> Color(0xFFC8E6C9)
-                        else -> Color(0xFFF5F5F5)
-                    }
-                    val border = when {
-                        isGreyed -> Color(0xFFBBBBBB)
-                        isCorrectAndDone -> Color(0xFF2E7D32)
-                        else -> Color(0xFFCCCCCC)
-                    }
-                    val textCol = when {
-                        isGreyed -> Color(0xFFAAAAAA)
-                        isCorrectAndDone -> Color(0xFF1B5E20)
-                        else -> Color(0xFF1A1A2E)
-                    }
-                    val clickable = !isGreyed && !answeredCorrectly
-
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(88.dp)
-                            .clip(RoundedCornerShape(12.dp))
-                            .background(bg)
-                            .border(2.dp, border, RoundedCornerShape(12.dp))
-                            .then(
-                                if (clickable) Modifier.clickable(
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    indication = null
-                                ) { onSelect(index) }
-                                else Modifier
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(option, fontSize = 28.sp, fontWeight = FontWeight.Bold, color = textCol, textAlign = TextAlign.Center)
-                    }
-                }
-            }
-        }
+        Text("🔊", fontSize = 36.sp)
     }
 }
 
@@ -479,12 +363,10 @@ fun FeedbackBanner(visible: Boolean, message: String, isGood: Boolean) {
 fun LevelSelectOverlay(onSelectLevel: (Int) -> Unit) {
     val levelColors = listOf(Color(0xFF2E7D32), Color(0xFF1565C0), Color(0xFFE65100), Color(0xFF6A1B9A))
     GameOverlay {
-        Text("🚓", fontSize = 56.sp, modifier = Modifier.padding(bottom = 8.dp))
-        Text("Word Police!", fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(bottom = 4.dp))
-        Text("Choose your level:", fontSize = 16.sp, color = Color(0xFF555555), modifier = Modifier.padding(bottom = 16.dp))
-        Text("🔊  Turn your sound on!", fontSize = 13.sp, color = Color(0xFF888888), modifier = Modifier.padding(bottom = 16.dp))
+        Text("🚓", fontSize = 64.sp, modifier = Modifier.padding(bottom = 4.dp))
+        Text("🔊", fontSize = 28.sp, color = Color(0xFF888888), modifier = Modifier.padding(bottom = 16.dp))
         WORD_ROUNDS.forEachIndexed { index, level ->
-            BigButton("${level.emoji}  ${level.name}", levelColors[index]) { onSelectLevel(index) }
+            BigButton("${level.emoji}   ${index + 1}", levelColors[index]) { onSelectLevel(index) }
             if (index < WORD_ROUNDS.lastIndex) Spacer(Modifier.height(10.dp))
         }
     }
@@ -499,21 +381,21 @@ fun RoundCompleteOverlay(
     onNext: () -> Unit
 ) {
     GameOverlay {
-        Text(if (lastRoundWon) "🚓 Got them!" else "💨 They escaped!", fontSize = 24.sp, fontWeight = FontWeight.ExtraBold,
-            color = if (lastRoundWon) Color(0xFF2E7D32) else Color(0xFFB71C1C), modifier = Modifier.padding(bottom = 8.dp))
-        Text("Round $roundsCompleted of $ROUNDS_PER_LEVEL done", fontSize = 14.sp, color = Color(0xFF666666), modifier = Modifier.padding(bottom = 20.dp))
+        Text(if (lastRoundWon) "🚓" else "💨", fontSize = 64.sp, modifier = Modifier.padding(bottom = 8.dp))
+        Text("$roundsCompleted / $ROUNDS_PER_LEVEL", fontSize = 32.sp, fontWeight = FontWeight.ExtraBold,
+            modifier = Modifier.padding(bottom = 20.dp))
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("✅", fontSize = 28.sp)
-                Text("$levelCorrect catches", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2E7D32))
+                Text("⭐", fontSize = 36.sp)
+                Text("$levelCorrect", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFF2E7D32))
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text("💨", fontSize = 28.sp)
-                Text("$levelEscapes escapes", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFFB71C1C))
+                Text("💨", fontSize = 36.sp)
+                Text("$levelEscapes", fontSize = 28.sp, fontWeight = FontWeight.ExtraBold, color = Color(0xFFB71C1C))
             }
         }
         Spacer(Modifier.height(24.dp))
-        BigButton("Next Round →", Color(0xFF1565C0), onNext)
+        BigButton("→", Color(0xFF1565C0), onNext)
     }
 }
 
@@ -521,26 +403,21 @@ fun RoundCompleteOverlay(
 fun LevelCompleteOverlay(state: GameState, onReplay: () -> Unit, onNextLevel: () -> Unit, onChooseLevel: () -> Unit) {
     val percent = state.scorePercent
     val stars = when { percent >= 80 -> 3; percent >= 60 -> 2; else -> 1 }
-    val verdict = when {
-        percent >= 80 -> "Excellent! Ready for the next level! 🌟"
-        percent >= 60 -> "Good effort! A bit more practice will help 💪"
-        else -> "Keep practising — you'll get there! 🚓"
-    }
     GameOverlay {
-        Text(if (percent >= 80) "🏆" else "🏁", fontSize = 48.sp, modifier = Modifier.padding(bottom = 4.dp))
-        Text("Level Complete!", fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(bottom = 8.dp))
         Row(modifier = Modifier.padding(bottom = 8.dp)) {
-            repeat(3) { i -> Text("⭐", fontSize = 32.sp, color = if (i < stars) Color.Unspecified else Color.Gray.copy(alpha = 0.2f)) }
+            repeat(3) { i -> Text("⭐", fontSize = 40.sp, color = if (i < stars) Color.Unspecified else Color.Gray.copy(alpha = 0.2f)) }
         }
-        Text("$percent%", fontSize = 52.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(bottom = 4.dp),
+        Text("$percent%", fontSize = 64.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(bottom = 4.dp),
             color = when { percent >= 80 -> Color(0xFF2E7D32); percent >= 60 -> Color(0xFFE65100); else -> Color(0xFFB71C1C) })
-        Text("${state.levelCorrect} catches  •  ${state.levelEscapes} escapes", fontSize = 13.sp, color = Color(0xFF666666), modifier = Modifier.padding(bottom = 12.dp))
-        Text(verdict, fontSize = 15.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(bottom = 24.dp))
-        if (state.hasNextLevel) { BigButton("Next Level →", Color(0xFF1565C0), onNextLevel); Spacer(Modifier.height(10.dp)) }
-        BigButton("Try Again", Color(0xFFB71C1C), onReplay)
+        Row(modifier = Modifier.padding(bottom = 24.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            Text("⭐ ${state.levelCorrect}", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2E7D32))
+            Text("💨 ${state.levelEscapes}", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color(0xFFB71C1C))
+        }
+        if (state.hasNextLevel) { BigButton("→", Color(0xFF1565C0), onNextLevel); Spacer(Modifier.height(10.dp)) }
+        BigButton("🔄", Color(0xFFB71C1C), onReplay)
         Spacer(Modifier.height(10.dp))
         OutlinedButton(onClick = onChooseLevel, shape = RoundedCornerShape(50.dp), modifier = Modifier.fillMaxWidth()) {
-            Text("Choose Level", fontSize = 20.sp, modifier = Modifier.padding(vertical = 8.dp))
+            Text("🏠", fontSize = 28.sp, modifier = Modifier.padding(vertical = 4.dp))
         }
     }
 }
