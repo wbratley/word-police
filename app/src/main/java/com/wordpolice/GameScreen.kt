@@ -48,6 +48,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -285,6 +286,7 @@ fun RoadScene(policeFraction: Float, criminalFraction: Float) {
             modifier = Modifier
                 .align(Alignment.BottomStart)
                 .offset(x = (w.value * animPolice - 18f).dp, y = (-6).dp)
+                .graphicsLayer { scaleX = -1f }
         )
 
         // Criminal car – ahead of police, flees right
@@ -294,6 +296,7 @@ fun RoadScene(policeFraction: Float, criminalFraction: Float) {
             modifier = Modifier
                 .align(Alignment.BottomStart)
                 .offset(x = (w.value * animCriminal - 18f).dp, y = (-6).dp)
+                .graphicsLayer { scaleX = -1f }
         )
     }
 }
