@@ -258,70 +258,62 @@ fun RoadScene(policeFraction: Float, criminalFraction: Float, modifier: Modifier
             .clip(RoundedCornerShape(12.dp))
             .border(3.dp, Color(0xFF1A1A2E), RoundedCornerShape(12.dp))
     ) {
-        val w = maxWidth // Dp
+        val w = maxWidth
+        val h = maxHeight
+        // Grass starts at 85% height; offset cars so they sit on the road surface
+        val carY = -(h.value * 0.17f).dp
 
         androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
             drawRoad()
         }
 
-        // Chase label
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .padding(top = 5.dp)
-                .background(Color(0xAA000000), RoundedCornerShape(10.dp))
-                .padding(horizontal = 10.dp, vertical = 2.dp)
-        ) {
-            Text("🚨 POLICE PURSUIT 🚨", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFFFFD700))
-        }
-
         // Police car – starts left, chases right
         Text(
             text = "🚓",
-            fontSize = 32.sp,
+            fontSize = 40.sp,
             modifier = Modifier
                 .align(Alignment.BottomStart)
-                .offset(x = (w.value * animPolice - 18f).dp, y = (-6).dp)
+                .offset(x = (w.value * animPolice - 22f).dp, y = carY)
                 .graphicsLayer { scaleX = -1f }
         )
 
         // Criminal car – ahead of police, flees right
         Text(
             text = "🚗",
-            fontSize = 32.sp,
+            fontSize = 40.sp,
             modifier = Modifier
                 .align(Alignment.BottomStart)
-                .offset(x = (w.value * animCriminal - 18f).dp, y = (-6).dp)
+                .offset(x = (w.value * animCriminal - 22f).dp, y = carY)
                 .graphicsLayer { scaleX = -1f }
         )
     }
 }
 
 private fun DrawScope.drawRoad() {
-    // Sky
-    drawRect(color = Color(0xFF87CEEB), size = Size(size.width, size.height * 0.44f))
-    // Ground strip below road
-    drawRect(
-        color = Color(0xFF4A7A2E),
-        topLeft = Offset(0f, size.height * 0.85f),
-        size = Size(size.width, size.height * 0.15f)
-    )
-    // Road surface
+    // Sky (reduced to give road more space)
+    drawRect(color = Color(0xFF87CEEB), size = Size(size.width, size.height * 0.25f))
+    // Road surface (25%–85%)
     drawRect(
         color = Color(0xFF555555),
-        topLeft = Offset(0f, size.height * 0.44f),
-        size = Size(size.width, size.height * 0.41f)
+        topLeft = Offset(0f, size.height * 0.25f),
+        size = Size(size.width, size.height * 0.60f)
     )
     // Yellow centre-line dashes
     var x = 0f
     while (x < size.width) {
         drawRect(
             color = Color(0xFFFFD700),
-            topLeft = Offset(x, size.height * 0.625f),
-            size = Size(46f, 5f)
+            topLeft = Offset(x, size.height * 0.52f),
+            size = Size(46f, 6f)
         )
         x += 92f
     }
+    // Grass verge at bottom (85%–100%)
+    drawRect(
+        color = Color(0xFF4A7A2E),
+        topLeft = Offset(0f, size.height * 0.85f),
+        size = Size(size.width, size.height * 0.15f)
+    )
 }
 
 // ─── Speaker button ──────────────────────────────────────────────────────────
