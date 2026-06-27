@@ -385,9 +385,9 @@ fun QuestionCard(
             ) {
                 Text(
                     "🔊  Hear the word",
-                    fontSize = 16.sp,
+                    fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 6.dp)
                 )
             }
 
@@ -416,7 +416,7 @@ fun QuestionCard(
                     Box(
                         modifier = Modifier
                             .weight(1f)
-                            .height(64.dp)
+                            .height(88.dp)
                             .clip(RoundedCornerShape(12.dp))
                             .background(bg)
                             .border(2.dp, border, RoundedCornerShape(12.dp))
@@ -429,7 +429,7 @@ fun QuestionCard(
                             ),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(option, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = textCol, textAlign = TextAlign.Center)
+                        Text(option, fontSize = 28.sp, fontWeight = FontWeight.Bold, color = textCol, textAlign = TextAlign.Center)
                     }
                 }
             }
@@ -527,7 +527,7 @@ fun WinOverlay(hasNextRound: Boolean, onNextRound: () -> Unit, onReplay: () -> U
             shape = RoundedCornerShape(50.dp),
             modifier = Modifier.fillMaxWidth()
         ) {
-            Text("Play Again", fontSize = 15.sp, modifier = Modifier.padding(vertical = 4.dp))
+            Text("Play Again", fontSize = 20.sp, modifier = Modifier.padding(vertical = 8.dp))
         }
     }
 }
@@ -587,6 +587,6 @@ fun BigButton(label: String, color: Color, onClick: () -> Unit) {
         shape = RoundedCornerShape(50.dp),
         colors = ButtonDefaults.buttonColors(containerColor = color)
     ) {
-        Text(label, fontSize = 16.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 6.dp))
+        Text(label, fontSize = 20.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(vertical = 8.dp))
     }
 }
