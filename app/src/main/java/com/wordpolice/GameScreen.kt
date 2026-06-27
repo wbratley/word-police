@@ -127,7 +127,7 @@ fun GameApp(viewModel: GameViewModel, soundManager: SoundManager) {
             RoadScene(
                 policeFraction = state.policeFraction,
                 criminalFraction = state.criminalFraction,
-                modifier = Modifier.fillMaxWidth().height(180.dp)
+                modifier = Modifier.fillMaxWidth().weight(1f)
             )
 
             Spacer(Modifier.height(8.dp))
@@ -153,7 +153,7 @@ fun GameApp(viewModel: GameViewModel, soundManager: SoundManager) {
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .weight(1f)
+                            .height(72.dp)
                             .clip(RoundedCornerShape(16.dp))
                             .background(bg)
                             .border(3.dp, border, RoundedCornerShape(16.dp))
@@ -182,7 +182,7 @@ fun GameApp(viewModel: GameViewModel, soundManager: SoundManager) {
                             ),
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(option, fontSize = 40.sp, fontWeight = FontWeight.ExtraBold, color = textCol)
+                        Text(option, fontSize = 36.sp, fontWeight = FontWeight.ExtraBold, color = textCol)
                     }
 
                     if (index < q.options.lastIndex) Spacer(Modifier.height(8.dp))
