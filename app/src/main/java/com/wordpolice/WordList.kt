@@ -2,61 +2,45 @@ package com.wordpolice
 
 data class WordRound(val name: String, val emoji: String, val words: List<String>)
 
+// All 44 Year 1 Common Exception Words, split into 4 rounds by rough difficulty.
 val WORD_ROUNDS = listOf(
     WordRound(
-        name = "Round 1 – First Words",
-        emoji = "🌟",
+        name = "Round 1 – Rookie",
+        emoji = "🚔",
         words = listOf(
-            "the", "a", "I", "is", "it", "he", "she", "we", "me", "be",
-            "do", "go", "no", "so", "to", "by", "my", "of", "if", "in",
-            "on", "at", "an", "as", "up"
+            "the", "a", "I", "is", "he", "she", "we", "me", "be",
+            "do", "to", "no"
         )
     ),
     WordRound(
-        name = "Round 2 – Common Words",
-        emoji = "🏅",
+        name = "Round 2 – Officer",
+        emoji = "🚓",
         words = listOf(
-            "was", "his", "has", "you", "are", "our", "one", "ask", "put",
-            "who", "oh", "her", "him", "all", "but", "had", "not", "can",
-            "did", "its", "off", "out", "too", "use"
+            "go", "so", "by", "my", "of", "his", "has",
+            "you", "they", "are", "was", "our"
         )
     ),
     WordRound(
-        name = "Round 3 – Tricky Words",
-        emoji = "🎯",
+        name = "Round 3 – Detective",
+        emoji = "🔍",
         words = listOf(
-            "said", "says", "were", "they", "your", "love", "come", "some",
-            "once", "push", "pull", "full", "house", "here", "there", "where",
-            "today", "many", "door", "floor", "poor", "both", "only", "also",
-            "most", "move", "sure", "hour"
+            "your", "were", "said", "says", "today",
+            "here", "there", "where", "love", "come", "some"
         )
     ),
     WordRound(
-        name = "Round 4 – Exception Words",
-        emoji = "🥈",
-        words = listOf(
-            "could", "would", "should", "people", "water", "friend", "school",
-            "again", "half", "money", "every", "any", "their", "because",
-            "beautiful", "pretty", "busy", "whole", "clothes", "sugar",
-            "prove", "improve", "eye", "find", "kind", "mind"
-        )
-    ),
-    WordRound(
-        name = "Round 5 – Master Level",
+        name = "Round 4 – Chief Inspector",
         emoji = "🏆",
         words = listOf(
-            "behind", "child", "children", "wild", "climb", "after", "fast",
-            "last", "past", "father", "class", "grass", "pass", "plant",
-            "path", "bath", "called", "asked", "looked", "people", "father",
-            "water", "again", "every", "beautiful", "because", "should",
-            "friend", "school", "clothes"
+            "one", "once", "ask", "put", "push", "pull",
+            "full", "house", "friend", "school"
         )
     )
 )
 
 val ALL_WORDS: List<String> = WORD_ROUNDS.flatMap { it.words }.distinct()
 
-/** Returns 2 distractor words from the same round (or adjacent rounds). */
+/** Returns 2 distractor words drawn from the same round where possible. */
 fun getDistractors(target: String, roundIndex: Int): List<String> {
     val round = WORD_ROUNDS[roundIndex]
     val pool = buildList {
