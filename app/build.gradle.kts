@@ -11,13 +11,23 @@ android {
         applicationId = "com.wordpolice"
         minSdk = 24
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = (findProperty("versionCode") as String?)?.toInt() ?: 1
+        versionName = (findProperty("versionCode") as String?)?.let { "1.$it" } ?: "1.0-dev"
         vectorDrawables { useSupportLibrary = true }
+    }
+
+    signingConfigs {
+        create("release") {
+            storeFile = file(System.getenv("SIGNING_STORE_FILE") ?: "keystore.jks")
+            storePassword = System.getenv("SIGNING_STORE_PASSWORD")
+            keyAlias = System.getenv("SIGNING_KEY_ALIAS")
+            keyPassword = System.getenv("SIGNING_KEY_PASSWORD")
+        }
     }
 
     buildTypes {
         release {
+            signingConfig = signingConfigs.getByName("release")
             isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
