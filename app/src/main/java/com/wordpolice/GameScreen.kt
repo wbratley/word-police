@@ -92,19 +92,24 @@ fun GameApp(viewModel: GameViewModel, soundManager: SoundManager) {
         }
     }
 
-    // Win / lose audio
-    LaunchedEffect(state.screen) {
+    // Round / level audio
+    LaunchedEffect(state.screen, state.roundsCompleted) {
         when (state.screen) {
-            Screen.WIN -> {
-                delay(300)
-                soundManager.playWinSiren()
-                delay(800)
-                soundManager.speakPhrase("You caught them! Brilliant spelling!")
-            }
-            Screen.LOSE -> {
+            Screen.ROUND_COMPLETE -> if (state.lastRoundWon) {
+                delay(300); soundManager.playWinSiren()
+                delay(800); soundManager.speakPhrase("Got them! Keep going!")
+            } else {
                 soundManager.playLose()
-                delay(500)
-                soundManager.speakPhrase("Oh no, they got away! Keep practising!")
+                delay(500); soundManager.speakPhrase("Oh no, they got away!")
+            }
+            Screen.LEVEL_COMPLETE -> {
+                delay(300)
+                if (state.scorePercent >= 80) {
+                    soundManager.playWinSiren()
+                    delay(800); soundManager.speakPhrase("Amazing! Level complete!")
+                } else {
+                    soundManager.speakPhrase("Well done! Keep practising!")
+                }
             }
             else -> {}
         }
@@ -134,9 +139,9 @@ fun GameApp(viewModel: GameViewModel, soundManager: SoundManager) {
                 modifier = Modifier.padding(top = 8.dp)
             )
 
-            if (state.screen != Screen.START) {
+            if (state.screen == Screen.PLAYING || state.screen == Screen.ROUND_COMPLETE) {
                 Text(
-                    text = "${state.currentRound.emoji}  ${state.currentRound.name}",
+                    text = "${state.currentLevel.emoji}  ${state.currentLevel.name}",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Medium,
                     color = Color(0xFF1A1A2E).copy(alpha = 0.75f)
@@ -184,13 +189,20 @@ fun GameApp(viewModel: GameViewModel, soundManager: SoundManager) {
 
         // Overlay screens
         when (state.screen) {
-            Screen.START -> StartOverlay(onStart = { viewModel.startGame(0) })
-            Screen.WIN -> WinOverlay(
-                hasNextRound = state.hasNextRound,
-                onNextRound = { viewModel.advanceRound() },
-                onReplay = { viewModel.replayRound() }
+            Screen.LEVEL_SELECT -> LevelSelectOverlay(onSelectLevel = { viewModel.selectLevel(it) })
+            Screen.ROUND_COMPLETE -> RoundCompleteOverlay(
+                roundsCompleted = state.roundsCompleted,
+                levelCorrect = state.levelCorrect,
+                levelEscapes = state.levelEscapes,
+                lastRoundWon = state.lastRoundWon,
+                onNext = { viewModel.startNextRound() }
             )
-            Screen.LOSE -> LoseOverlay(onRetry = { viewModel.replayRound() })
+            Screen.LEVEL_COMPLETE -> LevelCompleteOverlay(
+                state = state,
+                onReplay = { viewModel.replayLevel() },
+                onNextLevel = { viewModel.selectLevel(state.levelIndex + 1) },
+                onChooseLevel = { viewModel.backToLevelSelect() }
+            )
             Screen.PLAYING -> {}
         }
     }
@@ -464,96 +476,72 @@ fun FeedbackBanner(visible: Boolean, message: String, isGood: Boolean) {
 // ─── Overlay screens ─────────────────────────────────────────────────────────
 
 @Composable
-fun StartOverlay(onStart: () -> Unit) {
+fun LevelSelectOverlay(onSelectLevel: (Int) -> Unit) {
+    val levelColors = listOf(Color(0xFF2E7D32), Color(0xFF1565C0), Color(0xFFE65100), Color(0xFF6A1B9A))
     GameOverlay {
         Text("🚓", fontSize = 56.sp, modifier = Modifier.padding(bottom = 8.dp))
-        Text("Word Police!", fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(bottom = 12.dp))
-        Text(
-            "Listen to the word, then pick the right spelling.\n\nGet 5 correct in a row to catch the criminal!",
-            textAlign = TextAlign.Center,
-            color = Color(0xFF555555),
-            lineHeight = 22.sp,
-            modifier = Modifier.padding(bottom = 8.dp)
-        )
-        Text("🔊  Turn your sound on!", fontSize = 13.sp, color = Color(0xFF888888), modifier = Modifier.padding(bottom = 24.dp))
-        BigButton("Start Chase! 🚨", Color(0xFF2E7D32), onStart)
-    }
-}
-
-@Composable
-fun WinOverlay(hasNextRound: Boolean, onNextRound: () -> Unit, onReplay: () -> Unit) {
-    var phase by remember { mutableStateOf(0) }
-    LaunchedEffect(Unit) {
-        delay(350); phase = 1
-        delay(550); phase = 2
-        delay(600); phase = 3
-        delay(550); phase = 4
-    }
-
-    GameOverlay {
-        Text("🎉", fontSize = 48.sp, modifier = Modifier.padding(bottom = 4.dp))
-        Text("Caught them!", fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(bottom = 8.dp))
-
-        // Arrest animation sequence
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
-            modifier = Modifier.padding(vertical = 12.dp)
-        ) {
-            AnimatedVisibility(visible = phase >= 1, enter = slideInHorizontally { -80 } + fadeIn()) {
-                Text("🚓", fontSize = 38.sp)
-            }
-            AnimatedVisibility(visible = phase >= 2, enter = fadeIn(tween(300))) {
-                Text("  →  ", fontSize = 20.sp, color = Color(0xFF666666))
-            }
-            AnimatedVisibility(visible = phase >= 3, enter = slideInHorizontally { 80 } + fadeIn()) {
-                Text("🧑‍🦲", fontSize = 38.sp)
-            }
-            AnimatedVisibility(visible = phase >= 4, enter = scaleIn(tween(350))) {
-                Text("  🔒", fontSize = 38.sp)
-            }
-        }
-
-        Text(
-            "Amazing spelling! The criminal is going to jail!",
-            textAlign = TextAlign.Center,
-            color = Color(0xFF555555),
-            modifier = Modifier.padding(bottom = 20.dp)
-        )
-
-        if (hasNextRound) {
-            BigButton("Next Round! ➡️", Color(0xFF1565C0), onNextRound)
-            Spacer(Modifier.height(10.dp))
-        }
-        OutlinedButton(
-            onClick = onReplay,
-            shape = RoundedCornerShape(50.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text("Play Again", fontSize = 20.sp, modifier = Modifier.padding(vertical = 8.dp))
+        Text("Word Police!", fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(bottom = 4.dp))
+        Text("Choose your level:", fontSize = 16.sp, color = Color(0xFF555555), modifier = Modifier.padding(bottom = 16.dp))
+        Text("🔊  Turn your sound on!", fontSize = 13.sp, color = Color(0xFF888888), modifier = Modifier.padding(bottom = 16.dp))
+        WORD_ROUNDS.forEachIndexed { index, level ->
+            BigButton("${level.emoji}  ${level.name}", levelColors[index]) { onSelectLevel(index) }
+            if (index < WORD_ROUNDS.lastIndex) Spacer(Modifier.height(10.dp))
         }
     }
 }
 
 @Composable
-fun LoseOverlay(onRetry: () -> Unit) {
+fun RoundCompleteOverlay(
+    roundsCompleted: Int,
+    levelCorrect: Int,
+    levelEscapes: Int,
+    lastRoundWon: Boolean,
+    onNext: () -> Unit
+) {
     GameOverlay {
-        Text("😬", fontSize = 48.sp, modifier = Modifier.padding(bottom = 8.dp))
-        Text(
-            "They got away!",
-            fontSize = 26.sp,
-            fontWeight = FontWeight.ExtraBold,
-            color = Color(0xFFB71C1C),
-            modifier = Modifier.padding(bottom = 12.dp)
-        )
-        Text(
-            "The criminals escaped this time...\nBut the police never give up!\n\nTry again and get all 5 right!",
-            textAlign = TextAlign.Center,
-            color = Color(0xFF555555),
-            lineHeight = 22.sp,
-            modifier = Modifier.padding(bottom = 24.dp)
-        )
-        BigButton("Try Again! 🚓", Color(0xFFB71C1C), onRetry)
+        Text(if (lastRoundWon) "🚓 Got them!" else "💨 They escaped!", fontSize = 24.sp, fontWeight = FontWeight.ExtraBold,
+            color = if (lastRoundWon) Color(0xFF2E7D32) else Color(0xFFB71C1C), modifier = Modifier.padding(bottom = 8.dp))
+        Text("Round $roundsCompleted of $ROUNDS_PER_LEVEL done", fontSize = 14.sp, color = Color(0xFF666666), modifier = Modifier.padding(bottom = 20.dp))
+        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("✅", fontSize = 28.sp)
+                Text("$levelCorrect catches", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFF2E7D32))
+            }
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("💨", fontSize = 28.sp)
+                Text("$levelEscapes escapes", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color(0xFFB71C1C))
+            }
+        }
+        Spacer(Modifier.height(24.dp))
+        BigButton("Next Round →", Color(0xFF1565C0), onNext)
+    }
+}
+
+@Composable
+fun LevelCompleteOverlay(state: GameState, onReplay: () -> Unit, onNextLevel: () -> Unit, onChooseLevel: () -> Unit) {
+    val percent = state.scorePercent
+    val stars = when { percent >= 80 -> 3; percent >= 60 -> 2; else -> 1 }
+    val verdict = when {
+        percent >= 80 -> "Excellent! Ready for the next level! 🌟"
+        percent >= 60 -> "Good effort! A bit more practice will help 💪"
+        else -> "Keep practising — you'll get there! 🚓"
+    }
+    GameOverlay {
+        Text(if (percent >= 80) "🏆" else "🏁", fontSize = 48.sp, modifier = Modifier.padding(bottom = 4.dp))
+        Text("Level Complete!", fontSize = 26.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(bottom = 8.dp))
+        Row(modifier = Modifier.padding(bottom = 8.dp)) {
+            repeat(3) { i -> Text("⭐", fontSize = 32.sp, color = if (i < stars) Color.Unspecified else Color.Gray.copy(alpha = 0.2f)) }
+        }
+        Text("$percent%", fontSize = 52.sp, fontWeight = FontWeight.ExtraBold, modifier = Modifier.padding(bottom = 4.dp),
+            color = when { percent >= 80 -> Color(0xFF2E7D32); percent >= 60 -> Color(0xFFE65100); else -> Color(0xFFB71C1C) })
+        Text("${state.levelCorrect} catches  •  ${state.levelEscapes} escapes", fontSize = 13.sp, color = Color(0xFF666666), modifier = Modifier.padding(bottom = 12.dp))
+        Text(verdict, fontSize = 15.sp, textAlign = TextAlign.Center, modifier = Modifier.padding(bottom = 24.dp))
+        if (state.hasNextLevel) { BigButton("Next Level →", Color(0xFF1565C0), onNextLevel); Spacer(Modifier.height(10.dp)) }
+        BigButton("Try Again", Color(0xFFB71C1C), onReplay)
+        Spacer(Modifier.height(10.dp))
+        OutlinedButton(onClick = onChooseLevel, shape = RoundedCornerShape(50.dp), modifier = Modifier.fillMaxWidth()) {
+            Text("Choose Level", fontSize = 20.sp, modifier = Modifier.padding(vertical = 8.dp))
+        }
     }
 }
 
