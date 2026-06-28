@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
@@ -59,7 +60,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 
-// ─── Top-level composable ────────────────────────────────────────────────────
+// ─── Top-level composable ────────────────────────────────────────────
 
 @Composable
 fun GameApp(viewModel: GameViewModel, soundManager: SoundManager) {
@@ -218,7 +219,7 @@ fun GameApp(viewModel: GameViewModel, soundManager: SoundManager) {
     }
 }
 
-// ─── Score bar ───────────────────────────────────────────────────────────────
+// ─── Score bar ───────────────────────────────────────────────
 
 @Composable
 fun ScoreBar(correctCount: Int, escapeCount: Int) {
@@ -242,7 +243,7 @@ fun ScoreBar(correctCount: Int, escapeCount: Int) {
     }
 }
 
-// ─── Road scene ──────────────────────────────────────────────────────────────
+// ─── Road scene ──────────────────────────────────────────────
 
 @Composable
 fun RoadScene(policeFraction: Float, criminalFraction: Float, modifier: Modifier = Modifier) {
@@ -391,7 +392,7 @@ private fun DrawScope.drawTree(x: Float, groundY: Float) {
     drawCircle(color = Color(0xFF2E7D12), radius = 16f, center = Offset(x, groundY - 32f))
 }
 
-// ─── Speaker button ──────────────────────────────────────────────────────────
+// ─── Speaker button ──────────────────────────────────────────────
 
 @Composable
 fun SpeakerButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
@@ -405,7 +406,7 @@ fun SpeakerButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
     }
 }
 
-// ─── Feedback banner ─────────────────────────────────────────────────────────
+// ─── Feedback banner ─────────────────────────────────────────────
 
 @Composable
 fun FeedbackBanner(visible: Boolean, message: String, isGood: Boolean) {
@@ -426,7 +427,7 @@ fun FeedbackBanner(visible: Boolean, message: String, isGood: Boolean) {
     }
 }
 
-// ─── Overlay screens ─────────────────────────────────────────────────────────
+// ─── Overlay screens ──────────────────────────────────────────────
 
 @Composable
 fun LevelSelectOverlay(onSelectLevel: (Int) -> Unit) {
@@ -491,7 +492,7 @@ fun LevelCompleteOverlay(state: GameState, onReplay: () -> Unit, onNextLevel: ()
     }
 }
 
-// ─── Shared helpers ───────────────────────────────────────────────────────────
+// ─── Shared helpers ───────────────────────────────────────────────
 
 @Composable
 fun GameOverlay(content: @Composable ColumnScope.() -> Unit) {
