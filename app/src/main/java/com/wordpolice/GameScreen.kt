@@ -2,7 +2,11 @@ package com.wordpolice
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -253,6 +257,43 @@ fun RoadScene(policeFraction: Float, criminalFraction: Float, modifier: Modifier
         label = "criminal"
     )
 
+    val infiniteTransition = rememberInfiniteTransition(label = "road")
+
+    // Scrolling road dash offset (0→92 = one dash-spacing cycle)
+    val dashOffset by infiniteTransition.animateFloat(
+        initialValue = 0f, targetValue = 92f,
+        animationSpec = infiniteRepeatable(tween(260, easing = LinearEasing), RepeatMode.Restart),
+        label = "dashOffset"
+    )
+
+    // Scenery scroll fraction (0→1 per loop)
+    val sceneryOffset by infiniteTransition.animateFloat(
+        initialValue = 0f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(2200, easing = LinearEasing), RepeatMode.Restart),
+        label = "sceneryOffset"
+    )
+
+    // Cloud drift fraction (0→1 per loop, slower)
+    val cloudOffset by infiniteTransition.animateFloat(
+        initialValue = 0f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(9000, easing = LinearEasing), RepeatMode.Restart),
+        label = "cloudOffset"
+    )
+
+    // Police bounce: -2 ↔ +2 dp
+    val policeBounce by infiniteTransition.animateFloat(
+        initialValue = -2f, targetValue = 2f,
+        animationSpec = infiniteRepeatable(tween(220, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "policeBounce"
+    )
+
+    // Criminal bounce: starts at opposite phase, slightly different period
+    val criminalBounce by infiniteTransition.animateFloat(
+        initialValue = 2f, targetValue = -2f,
+        animationSpec = infiniteRepeatable(tween(190, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "criminalBounce"
+    )
+
     BoxWithConstraints(
         modifier = modifier
             .clip(RoundedCornerShape(12.dp))
@@ -260,11 +301,10 @@ fun RoadScene(policeFraction: Float, criminalFraction: Float, modifier: Modifier
     ) {
         val w = maxWidth
         val h = maxHeight
-        // Grass starts at 75% height; offset cars so they sit on the road surface
         val carY = -(h.value * 0.27f).dp
 
         androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
-            drawRoad()
+            drawAnimatedRoad(dashOffset, sceneryOffset, cloudOffset)
         }
 
         // Police car – starts left, chases right
@@ -273,7 +313,7 @@ fun RoadScene(policeFraction: Float, criminalFraction: Float, modifier: Modifier
             fontSize = 64.sp,
             modifier = Modifier
                 .align(Alignment.BottomStart)
-                .offset(x = (w.value * animPolice - 32f).dp, y = carY)
+                .offset(x = (w.value * animPolice - 32f).dp, y = carY + policeBounce.dp)
                 .graphicsLayer { scaleX = -1f }
         )
 
@@ -283,23 +323,38 @@ fun RoadScene(policeFraction: Float, criminalFraction: Float, modifier: Modifier
             fontSize = 64.sp,
             modifier = Modifier
                 .align(Alignment.BottomStart)
-                .offset(x = (w.value * animCriminal - 32f).dp, y = carY)
+                .offset(x = (w.value * animCriminal - 32f).dp, y = carY + criminalBounce.dp)
                 .graphicsLayer { scaleX = -1f }
         )
     }
 }
 
-private fun DrawScope.drawRoad() {
+private fun DrawScope.drawAnimatedRoad(dashOffset: Float, sceneryOffset: Float, cloudOffset: Float) {
     // Sky (35%)
     drawRect(color = Color(0xFF87CEEB), size = Size(size.width, size.height * 0.35f))
+
+    // Clouds – 3 evenly spaced, drift right-to-left, wrap seamlessly
+    val cloudTravel = size.width + 200f
+    val cloudYs = listOf(size.height * 0.07f, size.height * 0.17f, size.height * 0.10f)
+    val cloudRadii = listOf(26f, 18f, 22f)
+    for (i in 0..2) {
+        val cx = ((cloudOffset + i / 3f) % 1f) * cloudTravel - 100f
+        drawCloud(cx, cloudYs[i], cloudRadii[i])
+    }
+
     // Road surface (35%–75%)
     drawRect(
         color = Color(0xFF555555),
         topLeft = Offset(0f, size.height * 0.35f),
         size = Size(size.width, size.height * 0.40f)
     )
-    // Yellow centre-line dashes
-    var x = 0f
+
+    // White edge lines
+    drawRect(color = Color(0xFFFFFFFF), topLeft = Offset(0f, size.height * 0.365f), size = Size(size.width, 4f))
+    drawRect(color = Color(0xFFFFFFFF), topLeft = Offset(0f, size.height * 0.735f), size = Size(size.width, 4f))
+
+    // Scrolling yellow centre-line dashes
+    var x = -dashOffset
     while (x < size.width) {
         drawRect(
             color = Color(0xFFFFD700),
@@ -308,12 +363,32 @@ private fun DrawScope.drawRoad() {
         )
         x += 92f
     }
-    // Grass verge at bottom (75%–100%)
+
+    // Grass verge (75%–100%)
     drawRect(
         color = Color(0xFF4A7A2E),
         topLeft = Offset(0f, size.height * 0.75f),
         size = Size(size.width, size.height * 0.25f)
     )
+
+    // Scrolling roadside trees – 5 evenly spaced, wrap seamlessly
+    val treeTravel = size.width + 160f
+    for (i in 0..4) {
+        val tx = ((sceneryOffset + i / 5f) % 1f) * treeTravel - 80f
+        drawTree(tx, size.height * 0.75f)
+    }
+}
+
+private fun DrawScope.drawCloud(x: Float, y: Float, r: Float) {
+    val c = Color.White.copy(alpha = 0.88f)
+    drawCircle(c, radius = r, center = Offset(x, y))
+    drawCircle(c, radius = r * 0.72f, center = Offset(x + r * 0.85f, y + r * 0.25f))
+    drawCircle(c, radius = r * 0.62f, center = Offset(x - r * 0.75f, y + r * 0.30f))
+}
+
+private fun DrawScope.drawTree(x: Float, groundY: Float) {
+    drawRect(color = Color(0xFF8B4513), topLeft = Offset(x - 5f, groundY - 20f), size = Size(10f, 20f))
+    drawCircle(color = Color(0xFF2E7D12), radius = 16f, center = Offset(x, groundY - 32f))
 }
 
 // ─── Speaker button ──────────────────────────────────────────────────────────
