@@ -314,7 +314,7 @@ fun RoadScene(policeFraction: Float, criminalFraction: Float, modifier: Modifier
     ) {
         val w = maxWidth
         val h = maxHeight
-        val carY = -(h.value * 0.27f).dp
+        val carY = -(h.value * 0.36f).dp
 
         androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
             drawAnimatedRoad(dashOffset, sceneryOffset, cloudOffset)
@@ -370,12 +370,13 @@ private fun DrawScope.drawAnimatedRoad(dashOffset: Float, sceneryOffset: Float, 
     // Sky (35%)
     drawRect(color = Color(0xFF87CEEB), size = Size(size.width, size.height * 0.35f))
 
-    // Clouds – 3 evenly spaced, drift right-to-left, wrap seamlessly
-    val cloudTravel = size.width + 200f
-    val cloudYs = listOf(size.height * 0.07f, size.height * 0.17f, size.height * 0.10f)
-    val cloudRadii = listOf(26f, 18f, 22f)
+    // Clouds – 3 unevenly spaced, drift right-to-left, wrap seamlessly
+    val cloudTravel = size.width + 300f
+    val cloudFracs = listOf(0.0f, 0.38f, 0.68f)
+    val cloudYs = listOf(size.height * 0.07f, size.height * 0.19f, size.height * 0.11f)
+    val cloudRadii = listOf(44f, 32f, 38f)
     for (i in 0..2) {
-        val cx = ((cloudOffset + i / 3f) % 1f) * cloudTravel - 100f
+        val cx = (1f - ((cloudOffset + cloudFracs[i]) % 1f)) * cloudTravel - 150f
         drawCloud(cx, cloudYs[i], cloudRadii[i])
     }
 
@@ -408,10 +409,11 @@ private fun DrawScope.drawAnimatedRoad(dashOffset: Float, sceneryOffset: Float, 
         size = Size(size.width, size.height * 0.25f)
     )
 
-    // Scrolling roadside trees – 5 evenly spaced, wrap seamlessly
-    val treeTravel = size.width + 160f
-    for (i in 0..4) {
-        val tx = ((sceneryOffset + i / 5f) % 1f) * treeTravel - 80f
+    // Scrolling roadside trees – 3 irregularly spaced, right-to-left
+    val treeTravel = size.width + 200f
+    val treeFracs = listOf(0.0f, 0.37f, 0.71f)
+    for (frac in treeFracs) {
+        val tx = (1f - ((sceneryOffset + frac) % 1f)) * treeTravel - 100f
         drawTree(tx, size.height * 0.75f)
     }
 }
@@ -424,8 +426,11 @@ private fun DrawScope.drawCloud(x: Float, y: Float, r: Float) {
 }
 
 private fun DrawScope.drawTree(x: Float, groundY: Float) {
-    drawRect(color = Color(0xFF8B4513), topLeft = Offset(x - 5f, groundY - 20f), size = Size(10f, 20f))
-    drawCircle(color = Color(0xFF2E7D12), radius = 16f, center = Offset(x, groundY - 32f))
+    // trunk rooted 12px into the grass so trees clearly sit in the verge
+    val base = groundY + 12f
+    drawRect(color = Color(0xFF6B3A1F), topLeft = Offset(x - 9f, base - 44f), size = Size(18f, 44f))
+    drawCircle(color = Color(0xFF2D6B10), radius = 34f, center = Offset(x, base - 68f))
+    drawCircle(color = Color(0xFF3A8A18), radius = 24f, center = Offset(x + 10f, base - 78f))
 }
 
 // ─── Speaker button ──────────────────────────────────────────────
