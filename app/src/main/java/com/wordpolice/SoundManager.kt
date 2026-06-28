@@ -17,6 +17,7 @@ class SoundManager(context: Context) {
     private var ttsReady = false
     private val toneGen = ToneGenerator(AudioManager.STREAM_MUSIC, 90)
     private var sirenTrack: AudioTrack? = null
+    private var loopingTrack: AudioTrack? = null
 
     init {
         tts = TextToSpeech(context) { status ->
@@ -43,8 +44,8 @@ class SoundManager(context: Context) {
         tts?.speak(phrase, TextToSpeech.QUEUE_FLUSH, null, "phrase")
     }
 
-    /** Short ascending siren blip on correct answer. */
-    fun playCorrect() = playSiren(durationMs = 600, cycles = 1, lowHz = 800.0, highHz = 1300.0)
+    /** Two rapid woop cycles on correct answer. */
+    fun playCorrect() = playSiren(durationMs = 700, cycles = 2, lowHz = 700.0, highHz = 1150.0)
 
     /** Low buzzer on wrong answer. */
     fun playWrong() {
@@ -62,6 +63,59 @@ class SoundManager(context: Context) {
         toneGen.startTone(ToneGenerator.TONE_CDMA_ABBR_ALERT, 900)
     }
 
+    /** Start a continuously looping police woop-woop siren. */
+    fun startLoopingSiren() {
+        stopLoopingSiren()
+
+        val sampleRate = 44100
+        // 800ms cycle: midHz=900, total cycles=720 — integer, so the buffer loops seamlessly
+        val cycleSamples = sampleRate * 8 / 10
+        val buf = ShortArray(cycleSamples)
+        val lowHz = 680.0
+        val highHz = 1120.0
+
+        var phase = 0.0
+        for (i in buf.indices) {
+            val t = i.toDouble() / cycleSamples
+            val sweep = if (t < 0.5) t * 2.0 else (1.0 - t) * 2.0
+            val freq = lowHz + (highHz - lowHz) * sweep
+            // Fundamental + 2nd harmonic for siren character
+            val raw = sin(phase) + 0.35 * sin(2.0 * phase)
+            val envelope = when {
+                i < 441 -> i / 441.0
+                i > cycleSamples - 441 -> (cycleSamples - i) / 441.0
+                else -> 1.0
+            }
+            buf[i] = (32767 * 0.28 * envelope * raw / 1.35).toInt().toShort()
+            phase += 2.0 * PI * freq / sampleRate
+        }
+
+        val minBuf = AudioTrack.getMinBufferSize(sampleRate, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT)
+        loopingTrack = AudioTrack(
+            AudioAttributes.Builder()
+                .setUsage(AudioAttributes.USAGE_GAME)
+                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                .build(),
+            AudioFormat.Builder()
+                .setSampleRate(sampleRate)
+                .setEncoding(AudioFormat.ENCODING_PCM_16BIT)
+                .setChannelMask(AudioFormat.CHANNEL_OUT_MONO)
+                .build(),
+            maxOf(minBuf, cycleSamples * 2),
+            AudioTrack.MODE_STATIC,
+            AudioManager.AUDIO_SESSION_ID_GENERATE
+        )
+        loopingTrack?.write(buf, 0, cycleSamples)
+        loopingTrack?.setLoopPoints(0, cycleSamples, -1)
+        loopingTrack?.play()
+    }
+
+    fun stopLoopingSiren() {
+        loopingTrack?.stop()
+        loopingTrack?.release()
+        loopingTrack = null
+    }
+
     private fun playSiren(durationMs: Int, cycles: Int, lowHz: Double, highHz: Double) {
         sirenTrack?.stop()
         sirenTrack?.release()
@@ -71,6 +125,7 @@ class SoundManager(context: Context) {
         val cycleLen = numSamples.toDouble() / cycles
         val buf = ShortArray(numSamples)
 
+        var phase = 0.0
         for (i in buf.indices) {
             val posInCycle = (i % cycleLen) / cycleLen
             val freq = lowHz + (highHz - lowHz) * when {
@@ -82,7 +137,9 @@ class SoundManager(context: Context) {
                 i > numSamples - 1500 -> (numSamples - i).toDouble() / 1500.0
                 else -> 1.0
             }
-            buf[i] = (32767 * 0.72 * envelope * sin(2.0 * PI * freq * (i.toDouble() / sampleRate))).toInt().toShort()
+            val raw = sin(phase) + 0.35 * sin(2.0 * phase)
+            buf[i] = (32767 * 0.65 * envelope * raw / 1.35).toInt().toShort()
+            phase += 2.0 * PI * freq / sampleRate
         }
 
         val minBuf = AudioTrack.getMinBufferSize(sampleRate, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT)
@@ -110,5 +167,7 @@ class SoundManager(context: Context) {
         toneGen.release()
         sirenTrack?.stop()
         sirenTrack?.release()
+        loopingTrack?.stop()
+        loopingTrack?.release()
     }
 }

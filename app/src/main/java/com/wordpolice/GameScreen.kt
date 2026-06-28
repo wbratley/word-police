@@ -92,17 +92,22 @@ fun GameApp(viewModel: GameViewModel, soundManager: SoundManager) {
         }
     }
 
-    // Round / level audio
+    // Round / level audio + looping siren lifecycle
     LaunchedEffect(state.screen, state.roundsCompleted) {
         when (state.screen) {
-            Screen.ROUND_COMPLETE -> if (state.lastRoundWon) {
-                delay(300); soundManager.playWinSiren()
-                delay(800); soundManager.speakPhrase("Got them! Keep going!")
-            } else {
-                soundManager.playLose()
-                delay(500); soundManager.speakPhrase("Oh no, they got away!")
+            Screen.PLAYING -> soundManager.startLoopingSiren()
+            Screen.ROUND_COMPLETE -> {
+                soundManager.stopLoopingSiren()
+                if (state.lastRoundWon) {
+                    delay(300); soundManager.playWinSiren()
+                    delay(800); soundManager.speakPhrase("Got them! Keep going!")
+                } else {
+                    soundManager.playLose()
+                    delay(500); soundManager.speakPhrase("Oh no, they got away!")
+                }
             }
             Screen.LEVEL_COMPLETE -> {
+                soundManager.stopLoopingSiren()
                 delay(300)
                 if (state.scorePercent >= 80) {
                     soundManager.playWinSiren()
@@ -111,7 +116,7 @@ fun GameApp(viewModel: GameViewModel, soundManager: SoundManager) {
                     soundManager.speakPhrase("Well done! Keep practising!")
                 }
             }
-            else -> {}
+            Screen.LEVEL_SELECT -> soundManager.stopLoopingSiren()
         }
     }
 
@@ -281,6 +286,13 @@ fun RoadScene(policeFraction: Float, criminalFraction: Float, modifier: Modifier
         label = "cloudOffset"
     )
 
+    // Siren light phase (0→1 per 400ms, synced to looping siren cycle)
+    val sirenPhase by infiniteTransition.animateFloat(
+        initialValue = 0f, targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(400, easing = LinearEasing), RepeatMode.Restart),
+        label = "sirenPhase"
+    )
+
     // Police bounce: -2 ↔ +2 dp
     val policeBounce by infiniteTransition.animateFloat(
         initialValue = -2f, targetValue = 2f,
@@ -317,6 +329,30 @@ fun RoadScene(policeFraction: Float, criminalFraction: Float, modifier: Modifier
                 .offset(x = (w.value * animPolice - 32f).dp, y = carY + policeBounce.dp)
                 .graphicsLayer { scaleX = -1f }
         )
+
+        // Flashing red/blue siren lights on police car roof
+        Row(
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .offset(
+                    x = (w.value * animPolice - 21f).dp,
+                    y = carY + policeBounce.dp - 36.dp
+                )
+        ) {
+            Box(
+                Modifier
+                    .width(11.dp).height(7.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(if (sirenPhase < 0.5f) Color(0xFFFF2222) else Color(0xFF661111))
+            )
+            Spacer(Modifier.width(3.dp))
+            Box(
+                Modifier
+                    .width(11.dp).height(7.dp)
+                    .clip(RoundedCornerShape(2.dp))
+                    .background(if (sirenPhase >= 0.5f) Color(0xFF2222FF) else Color(0xFF111166))
+            )
+        }
 
         // Criminal car – ahead of police, flees right
         Text(
