@@ -260,8 +260,8 @@ fun RoadScene(policeFraction: Float, criminalFraction: Float, modifier: Modifier
     ) {
         val w = maxWidth
         val h = maxHeight
-        // Grass starts at 85% height; offset cars so they sit on the road surface
-        val carY = -(h.value * 0.17f).dp
+        // Grass starts at 75% height; offset cars so they sit on the road surface
+        val carY = -(h.value * 0.27f).dp
 
         androidx.compose.foundation.Canvas(modifier = Modifier.fillMaxSize()) {
             drawRoad()
@@ -270,49 +270,49 @@ fun RoadScene(policeFraction: Float, criminalFraction: Float, modifier: Modifier
         // Police car – starts left, chases right
         Text(
             text = "🚓",
-            fontSize = 40.sp,
+            fontSize = 64.sp,
             modifier = Modifier
                 .align(Alignment.BottomStart)
-                .offset(x = (w.value * animPolice - 22f).dp, y = carY)
+                .offset(x = (w.value * animPolice - 32f).dp, y = carY)
                 .graphicsLayer { scaleX = -1f }
         )
 
         // Criminal car – ahead of police, flees right
         Text(
             text = "🚗",
-            fontSize = 40.sp,
+            fontSize = 64.sp,
             modifier = Modifier
                 .align(Alignment.BottomStart)
-                .offset(x = (w.value * animCriminal - 22f).dp, y = carY)
+                .offset(x = (w.value * animCriminal - 32f).dp, y = carY)
                 .graphicsLayer { scaleX = -1f }
         )
     }
 }
 
 private fun DrawScope.drawRoad() {
-    // Sky (reduced to give road more space)
-    drawRect(color = Color(0xFF87CEEB), size = Size(size.width, size.height * 0.25f))
-    // Road surface (25%–85%)
+    // Sky (35%)
+    drawRect(color = Color(0xFF87CEEB), size = Size(size.width, size.height * 0.35f))
+    // Road surface (35%–75%)
     drawRect(
         color = Color(0xFF555555),
-        topLeft = Offset(0f, size.height * 0.25f),
-        size = Size(size.width, size.height * 0.60f)
+        topLeft = Offset(0f, size.height * 0.35f),
+        size = Size(size.width, size.height * 0.40f)
     )
     // Yellow centre-line dashes
     var x = 0f
     while (x < size.width) {
         drawRect(
             color = Color(0xFFFFD700),
-            topLeft = Offset(x, size.height * 0.52f),
+            topLeft = Offset(x, size.height * 0.55f),
             size = Size(46f, 6f)
         )
         x += 92f
     }
-    // Grass verge at bottom (85%–100%)
+    // Grass verge at bottom (75%–100%)
     drawRect(
         color = Color(0xFF4A7A2E),
-        topLeft = Offset(0f, size.height * 0.85f),
-        size = Size(size.width, size.height * 0.15f)
+        topLeft = Offset(0f, size.height * 0.75f),
+        size = Size(size.width, size.height * 0.25f)
     )
 }
 
