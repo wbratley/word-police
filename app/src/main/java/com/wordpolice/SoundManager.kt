@@ -26,6 +26,12 @@ class SoundManager(context: Context) {
                 if (result != TextToSpeech.LANG_MISSING_DATA && result != TextToSpeech.LANG_NOT_SUPPORTED) {
                     tts?.setPitch(1.1f)
                     tts?.setSpeechRate(0.82f)
+                    tts?.setOnUtteranceProgressListener(object : android.speech.tts.UtteranceProgressListener() {
+                        override fun onStart(utteranceId: String?) { loopingTrack?.setVolume(0.22f) }
+                        override fun onDone(utteranceId: String?) { loopingTrack?.setVolume(1.0f) }
+                        @Deprecated("Deprecated in Java")
+                        override fun onError(utteranceId: String?) { loopingTrack?.setVolume(1.0f) }
+                    })
                     ttsReady = true
                 }
             }
@@ -86,7 +92,7 @@ class SoundManager(context: Context) {
                 i > cycleSamples - 441 -> (cycleSamples - i) / 441.0
                 else -> 1.0
             }
-            buf[i] = (32767 * 0.28 * envelope * raw / 1.35).toInt().toShort()
+            buf[i] = (32767 * 0.16 * envelope * raw / 1.35).toInt().toShort()
             phase += 2.0 * PI * freq / sampleRate
         }
 

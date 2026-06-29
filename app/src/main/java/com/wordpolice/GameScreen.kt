@@ -70,6 +70,7 @@ fun GameApp(viewModel: GameViewModel, soundManager: SoundManager) {
     var feedbackGood by remember { mutableStateOf(true) }
     var feedbackVisible by remember { mutableStateOf(false) }
     var feedbackTick by remember { mutableStateOf(0) }
+    var sirenEnabled by remember { mutableStateOf(true) }
 
     // Auto-hide feedback
     LaunchedEffect(feedbackTick) {
@@ -92,10 +93,17 @@ fun GameApp(viewModel: GameViewModel, soundManager: SoundManager) {
         }
     }
 
-    // Round / level audio + looping siren lifecycle
+    // Looping siren: starts/stops with screen and respects the toggle
+    LaunchedEffect(state.screen, sirenEnabled) {
+        if (state.screen == Screen.PLAYING) {
+            if (sirenEnabled) soundManager.startLoopingSiren() else soundManager.stopLoopingSiren()
+        }
+    }
+
+    // Round / level audio cues (screen transitions only)
     LaunchedEffect(state.screen, state.roundsCompleted) {
         when (state.screen) {
-            Screen.PLAYING -> soundManager.startLoopingSiren()
+            Screen.PLAYING -> {}
             Screen.ROUND_COMPLETE -> {
                 soundManager.stopLoopingSiren()
                 if (state.lastRoundWon) {
@@ -137,6 +145,7 @@ fun GameApp(viewModel: GameViewModel, soundManager: SoundManager) {
             RoadScene(
                 policeFraction = state.policeFraction,
                 criminalFraction = state.criminalFraction,
+                sirenEnabled = sirenEnabled,
                 modifier = Modifier.fillMaxWidth().weight(1f)
             )
 
@@ -145,10 +154,19 @@ fun GameApp(viewModel: GameViewModel, soundManager: SoundManager) {
             if (state.screen == Screen.PLAYING && state.question != null) {
                 val q = state.question!!
 
-                SpeakerButton(
-                    onClick = { soundManager.speakWord(q.word) },
-                    modifier = Modifier.fillMaxWidth()
-                )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    SpeakerButton(
+                        onClick = { soundManager.speakWord(q.word) },
+                        modifier = Modifier.weight(1f)
+                    )
+                    SirenToggleButton(
+                        sirenEnabled = sirenEnabled,
+                        onClick = { sirenEnabled = !sirenEnabled }
+                    )
+                }
 
                 Spacer(Modifier.height(8.dp))
 
@@ -251,7 +269,7 @@ fun ScoreBar(correctCount: Int, escapeCount: Int) {
 // ─── Road scene ──────────────────────────────────────────────
 
 @Composable
-fun RoadScene(policeFraction: Float, criminalFraction: Float, modifier: Modifier = Modifier) {
+fun RoadScene(policeFraction: Float, criminalFraction: Float, sirenEnabled: Boolean, modifier: Modifier = Modifier) {
     val animPolice by animateFloatAsState(
         targetValue = policeFraction,
         animationSpec = tween(700, easing = FastOutSlowInEasing),
@@ -335,22 +353,22 @@ fun RoadScene(policeFraction: Float, criminalFraction: Float, modifier: Modifier
             modifier = Modifier
                 .align(Alignment.BottomStart)
                 .offset(
-                    x = (w.value * animPolice - 21f).dp,
-                    y = carY + policeBounce.dp - 36.dp
+                    x = (w.value * animPolice - 14f).dp,
+                    y = carY + policeBounce.dp - 42.dp
                 )
         ) {
             Box(
                 Modifier
                     .width(11.dp).height(7.dp)
                     .clip(RoundedCornerShape(2.dp))
-                    .background(if (sirenPhase < 0.5f) Color(0xFFFF2222) else Color(0xFF661111))
+                    .background(if (sirenEnabled && sirenPhase < 0.5f) Color(0xFFFF2222) else Color(0xFF661111))
             )
             Spacer(Modifier.width(3.dp))
             Box(
                 Modifier
                     .width(11.dp).height(7.dp)
                     .clip(RoundedCornerShape(2.dp))
-                    .background(if (sirenPhase >= 0.5f) Color(0xFF2222FF) else Color(0xFF111166))
+                    .background(if (sirenEnabled && sirenPhase >= 0.5f) Color(0xFF2222FF) else Color(0xFF111166))
             )
         }
 
@@ -444,6 +462,20 @@ fun SpeakerButton(onClick: () -> Unit, modifier: Modifier = Modifier) {
         colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1565C0))
     ) {
         Text("🔊", fontSize = 36.sp)
+    }
+}
+
+@Composable
+fun SirenToggleButton(sirenEnabled: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Button(
+        onClick = onClick,
+        modifier = modifier.height(64.dp),
+        shape = RoundedCornerShape(16.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = if (sirenEnabled) Color(0xFF1565C0) else Color(0xFF757575)
+        )
+    ) {
+        Text(if (sirenEnabled) "🚨" else "🔕", fontSize = 32.sp)
     }
 }
 
