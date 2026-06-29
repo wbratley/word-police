@@ -353,8 +353,8 @@ fun RoadScene(policeFraction: Float, criminalFraction: Float, sirenEnabled: Bool
             modifier = Modifier
                 .align(Alignment.BottomStart)
                 .offset(
-                    x = (w.value * animPolice - 14f).dp,
-                    y = carY + policeBounce.dp - 42.dp
+                    x = (w.value * animPolice - 16f).dp,
+                    y = carY + policeBounce.dp - 52.dp
                 )
         ) {
             Box(
